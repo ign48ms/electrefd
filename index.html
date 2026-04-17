@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELECTRE I - Aide à la Décision Multicritère</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(to bottom right, #f9fafb, #f3f4f6);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.25rem;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.125rem;
+            color: #4b5563;
+        }
+
+        .header small {
+            font-size: 0.875rem;
+            color: #6b7280;
+            display: block;
+            margin-top: 0.5rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: #1f2937;
+        }
+
+        .card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #374151;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            background-color: #dbeafe;
+            color: #1e40af;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .grid-cols-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input[type="number"],
+        .form-group select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .form-group input[type="number"]:focus,
+        .form-group select:focus {
+            outline: none;
+            ring: 2px;
+            ring-color: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        .matrix-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .matrix-description {
+            font-size: 0.875rem;
+            color: #4b5563;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th {
+            border: 1px solid #d1d5db;
+            padding: 1rem;
+            background-color: #f3f4f6;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        table td {
+            border: 1px solid #d1d5db;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        table tbody tr:nth-child(odd) td {
+            background-color: #fafbfc;
+        }
+
+        table tbody tr td:first-child {
+            background-color: #f3f4f6;
+            font-weight: 500;
+        }
+
+        table input {
+            width: 100%;
+            padding: 0.5rem;
+            border: none;
+            text-align: center;
+            background: transparent;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        table input:focus {
+            outline: none;
+            background-color: white;
+            border: 1px solid #3b82f6;
+        }
+
+        .weights-section,
+        .thresholds-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .weights-section h3,
+        .thresholds-section h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #374151;
+        }
+
+        .weight-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            align-items: center;
+        }
+
+        .threshold-row {
+            display: grid;
+            grid-template-columns: 1fr 150px;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: flex-start;
+        }
+
+        .threshold-row label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .threshold-row input {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+
+        .error-alert {
+            background-color: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0.375rem;
+            display: none;
+        }
+
+        .error-alert.show {
+            display: block;
+        }
+
+        .error-alert-content {
+            color: #991b1b;
+            font-size: 0.875rem;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .recommendation-box {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-left: 4px solid #3b82f6;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0.375rem;
+        }
+
+        .recommendation-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 1rem;
+        }
+
+        .recommendation-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .recommendation-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            text-align: center;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .recommendation-rank {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+
+        .recommendation-label {
+            font-size: 0.875rem;
+            color: #4b5563;
+            margin-top: 0.25rem;
+        }
+
+        .recommendation-detail {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+
+        .results-space {
+            margin-top: 2rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .criteria-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .criteria-section h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #374151;
+        }
+
+        .criteria-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .criteria-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .criteria-item label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .criteria-item select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+        }
+
+        .weight-sum {
+            margin-left: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .weight-sum.valid {
+            color: #059669;
+        }
+
+        .weight-sum.invalid {
+            color: #dc2626;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 3rem;
+        }
+
+        .kernel-box {
+            background: linear-gradient(to right, #f0fdf4 0%, #f0f9ff 100%);
+            border: 2px solid #86efac;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .kernel-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .kernel-star {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            background-color: #16a34a;
+            color: white;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            font-weight: bold;
+        }
+
+        .kernel-description {
+            font-size: 0.875rem;
+            color: #4b5563;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .kernel-empty {
+            padding: 1rem;
+            background-color: #fef2f2;
+            border-left: 4px solid #ef4444;
+            border-radius: 0.375rem;
+            color: #991b1b;
+            font-size: 0.875rem;
+        }
+
+        .threshold-description {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>ELECTRE I</h1>
+            <p>Méthode d'aide à la décision multicritère</p>
+            <small>Identification des meilleures alternatives par analyse de surclassement</small>
+        </div>
+
+        <!-- Input Section -->
+        <div class="card">
+            <h2>Configuration ELECTRE I</h2>
+            <form id="electreForm">
+                <!-- Number inputs -->
+                <div class="grid-cols-2">
+                    <div class="form-group">
+                        <label for="numAlternatives">Nombre d'alternatives</label>
+                        <input type="number" id="numAlternatives" min="2" max="10" value="3" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="numCriteria">Nombre de critères</label>
+                        <input type="number" id="numCriteria" min="2" max="10" value="3" required>
+                    </div>
+                </div>
+
+                <!-- Performance Matrix -->
+                <div class="matrix-section">
+                    <h3>Matrice de performance</h3>
+                    <div class="table-wrapper">
+                        <table id="performanceTable">
+                            <!-- Generated dynamically -->
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Criteria Typology -->
+                <div class="criteria-section">
+                    <h3>Caractéristique des critères</h3>
+                    <p class="matrix-description">Indiquez pour chaque critère si les valeurs plus élevées ou plus basses sont préférées.</p>
+                    <div class="criteria-grid" id="criteriaTypologyContainer">
+                        <!-- Generated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Weights -->
+                <div class="weights-section">
+                    <h3>
+                        Poids des critères
+                        <span class="weight-sum" id="weightSum">(Somme : 1.000)</span>
+                    </h3>
+                    <div class="criteria-grid" id="weightsContainer">
+                        <!-- Generated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Thresholds -->
+                <div class="thresholds-section">
+                    <div class="threshold-row">
+                        <div>
+                            <label for="concordanceThreshold">Seuil de concordance (0-1)</label>
+                            <p class="threshold-description">Niveau minimum de concordance requis pour le surclassement</p>
+                        </div>
+                        <input type="number" id="concordanceThreshold" min="0" max="1" step="0.01" value="0.7" required>
+                    </div>
+                    <div class="threshold-row">
+                        <div>
+                            <label for="discordanceThreshold">Seuil de discordance (0-1)</label>
+                            <p class="threshold-description">Niveau maximum de discordance autorisé pour le surclassement</p>
+                        </div>
+                        <input type="number" id="discordanceThreshold" min="0" max="1" step="0.01" value="0.3" required>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Calculer avec ELECTRE I</button>
+                    <button type="reset" class="btn-secondary">Réinitialiser</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Error Alert -->
+        <div class="error-alert" id="errorAlert">
+            <div class="error-alert-content" id="errorMessage"></div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection">
+            <!-- Concordance Matrix -->
+            <div class="card">
+                <h3>
+                    <span class="step-number">1</span>
+                    Matrice de concordance
+                </h3>
+                <p class="matrix-description">
+                    La concordance C(a,b) représente la proportion de poids des critères pour lesquels
+                    l'alternative 'a' est au moins aussi bonne que l'alternative 'b'.
+                </p>
+                <div class="table-wrapper">
+                    <table id="concordanceTable">
+                        <!-- Generated dynamically -->
+                    </table>
+                </div>
+            </div>
+
+            <!-- Discordance Matrix -->
+            <div class="card">
+                <h3>
+                    <span class="step-number">2</span>
+                    Matrice de discordance
+                </h3>
+                <p class="matrix-description">
+                    La discordance D(a,b) mesure le désaccord maximum normalisé entre 'a' et 'b' sur
+                    l'ensemble des critères. Une valeur élevée indique qu'il existe au moins un critère
+                    où 'b' est nettement meilleure que 'a'.
+                </p>
+                <div class="table-wrapper">
+                    <table id="discordanceTable">
+                        <!-- Generated dynamically -->
+                    </table>
+                </div>
+            </div>
+
+            <!-- Outranking Matrix -->
+            <div class="card">
+                <h3>
+                    <span class="step-number">3</span>
+                    Matrice de surclassement
+                </h3>
+                <p class="matrix-description">
+                    Une alternative 'a' surclasse 'b' (noté aSb) si la concordance est suffisamment
+                    élevée ET la discordance est suffisamment faible. Cela signifie que 'a' est
+                    globalement au moins aussi bonne que 'b'.
+                </p>
+                <div class="table-wrapper">
+                    <table id="outrankingTable">
+                        <!-- Generated dynamically -->
+                    </table>
+                </div>
+                <p class="matrix-description">
+                    ✓ = l'alternative en ligne surclasse celle en colonne | ✗ = pas de surclassement | - = diagonal (n/a)
+                </p>
+            </div>
+
+            <!-- Recommendations - At the bottom -->
+            <div class="card">
+                <div class="kernel-box" id="recommendationBox" style="display: none;">
+                    <div class="kernel-title">
+                        <span class="kernel-star">★</span>
+                        Noyau et Recommandation - Meilleures alternatives
+                    </div>
+                    <p class="kernel-description">
+                        Les alternatives suivantes ne sont surclassées par aucune autre. Elles sont classées selon
+                        leur force de domination (nombre d'alternatives qu'elles surclassent). Ces alternatives
+                        constituent les meilleures choix selon la méthode ELECTRE I.
+                    </p>
+                    <div class="recommendation-items" id="recommendationItems">
+                        <!-- Generated dynamically -->
+                    </div>
+                </div>
+                <div class="kernel-empty" id="kernelEmpty" style="display: none;">
+                    Aucune alternative n'a été trouvée dans le noyau. Essayez d'ajuster les seuils de concordance et de discordance.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; ZENNAKI et MENDAS droits réservés.</p>
+    </footer>
+
+    <script>
+        // ELECTRE I Algorithm Implementation
+        class ELECTREI {
+            static calculateConcordanceMatrix(performanceMatrix, weights, criteriaTypology = []) {
+                const n = performanceMatrix.length;
+                const m = performanceMatrix[0].length;
+                
+                const typology = criteriaTypology.length === m 
+                    ? criteriaTypology 
+                    : Array(m).fill('max');
+                
+                const concordanceMatrix = Array(n).fill(0).map(() => Array(n).fill(0));
+
+                for (let a = 0; a < n; a++) {
+                    for (let b = 0; b < n; b++) {
+                        if (a === b) {
+                            concordanceMatrix[a][b] = 1;
+                            continue;
+                        }
+
+                        let concordanceSum = 0;
+
+                        for (let j = 0; j < weights.length; j++) {
+                            let isAtLeastAsGood = false;
+                            
+                            if (typology[j] === 'max') {
+                                isAtLeastAsGood = performanceMatrix[a][j] >= performanceMatrix[b][j];
+                            } else if (typology[j] === 'min') {
+                                isAtLeastAsGood = performanceMatrix[a][j] <= performanceMatrix[b][j];
+                            }
+                            
+                            if (isAtLeastAsGood) {
+                                concordanceSum += weights[j];
+                            }
+                        }
+
+                        concordanceMatrix[a][b] = concordanceSum;
+                    }
+                }
+
+                return concordanceMatrix;
+            }
+
+            static calculateDiscordanceMatrix(performanceMatrix, criteriaTypology = []) {
+                const n = performanceMatrix.length;
+                const m = performanceMatrix[0].length;
+                
+                const typology = criteriaTypology.length === m 
+                    ? criteriaTypology 
+                    : Array(m).fill('max');
+                
+                const discordanceMatrix = Array(n).fill(0).map(() => Array(n).fill(0));
+
+                const amplitudes = [];
+                for (let j = 0; j < m; j++) {
+                    const values = performanceMatrix.map(row => row[j]);
+                    const max = Math.max(...values);
+                    const min = Math.min(...values);
+                    amplitudes.push(max - min || 1);
+                }
+
+                for (let a = 0; a < n; a++) {
+                    for (let b = 0; b < n; b++) {
+                        if (a === b) {
+                            discordanceMatrix[a][b] = 0;
+                            continue;
+                        }
+
+                        let maxDiscordance = 0;
+
+                        for (let j = 0; j < m; j++) {
+                            let isBSuperior = false;
+                            let diff = 0;
+                            
+                            if (typology[j] === 'max') {
+                                if (performanceMatrix[b][j] > performanceMatrix[a][j]) {
+                                    isBSuperior = true;
+                                    diff = (performanceMatrix[b][j] - performanceMatrix[a][j]) / amplitudes[j];
+                                }
+                            } else if (typology[j] === 'min') {
+                                if (performanceMatrix[b][j] < performanceMatrix[a][j]) {
+                                    isBSuperior = true;
+                                    diff = (performanceMatrix[a][j] - performanceMatrix[b][j]) / amplitudes[j];
+                                }
+                            }
+                            
+                            if (isBSuperior) {
+                                maxDiscordance = Math.max(maxDiscordance, diff);
+                            }
+                        }
+
+                        discordanceMatrix[a][b] = maxDiscordance;
+                    }
+                }
+
+                return discordanceMatrix;
+            }
+
+            static calculateOutrankingMatrix(concordanceMatrix, discordanceMatrix, concordanceThreshold, discordanceThreshold) {
+                const n = concordanceMatrix.length;
+                const outrankingMatrix = Array(n).fill(0).map(() => Array(n).fill(false));
+
+                for (let a = 0; a < n; a++) {
+                    for (let b = 0; b < n; b++) {
+                        if (a === b) {
+                            outrankingMatrix[a][b] = false;
+                            continue;
+                        }
+
+                        const concordanceCondition = concordanceMatrix[a][b] >= concordanceThreshold;
+                        const discordanceCondition = discordanceMatrix[a][b] <= discordanceThreshold;
+
+                        outrankingMatrix[a][b] = concordanceCondition && discordanceCondition;
+                    }
+                }
+
+                return outrankingMatrix;
+            }
+
+            static extractKernel(outrankingMatrix) {
+                const n = outrankingMatrix.length;
+                const notOutranked = [];
+
+                for (let a = 0; a < n; a++) {
+                    let isOutranked = false;
+
+                    for (let b = 0; b < n; b++) {
+                        if (b !== a && outrankingMatrix[b][a]) {
+                            isOutranked = true;
+                            break;
+                        }
+                    }
+
+                    if (!isOutranked) {
+                        notOutranked.push(a);
+                    }
+                }
+
+                if (notOutranked.length === 0) {
+                    return [];
+                }
+
+                return notOutranked;
+            }
+
+            static validateInputs(performanceMatrix, weights, concordanceThreshold, discordanceThreshold) {
+                if (!performanceMatrix || performanceMatrix.length === 0) {
+                    return "La matrice de performance ne peut pas être vide";
+                }
+
+                if (weights.some(w => w < 0)) {
+                    return "Les poids doivent être positifs";
+                }
+
+                const sumWeights = weights.reduce((sum, w) => sum + w, 0);
+                if (Math.abs(sumWeights - 1) > 0.01) {
+                    return `La somme des poids doit être égale à 1 (actuellement: ${sumWeights.toFixed(2)})`;
+                }
+
+                if (concordanceThreshold < 0 || concordanceThreshold > 1) {
+                    return "Le seuil de concordance doit être entre 0 et 1";
+                }
+
+                if (discordanceThreshold < 0 || discordanceThreshold > 1) {
+                    return "Le seuil de discordance doit être entre 0 et 1";
+                }
+
+                for (let i = 0; i < performanceMatrix.length; i++) {
+                    for (let j = 0; j < performanceMatrix[i].length; j++) {
+                        if (isNaN(performanceMatrix[i][j])) {
+                            return `Valeur invalide à la ligne ${i + 1}, colonne ${j + 1}`;
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            static generateRecommendation(kernel, outrankingMatrix) {
+                if (kernel.length === 0) {
+                    return [];
+                }
+
+                const scoredAlternatives = kernel.map(altIndex => {
+                    let dominationCount = 0;
+
+                    for (let j = 0; j < outrankingMatrix[altIndex].length; j++) {
+                        if (outrankingMatrix[altIndex][j]) {
+                            dominationCount++;
+                        }
+                    }
+
+                    return {
+                        index: altIndex,
+                        dominationCount: dominationCount,
+                    };
+                });
+
+                scoredAlternatives.sort((a, b) => b.dominationCount - a.dominationCount);
+
+                return scoredAlternatives.map((alt, rank) => ({
+                    ...alt,
+                    rank: rank + 1,
+                }));
+            }
+        }
+
+        // UI Management
+        class UIManager {
+            constructor() {
+                this.form = document.getElementById('electreForm');
+                this.numAlternativesInput = document.getElementById('numAlternatives');
+                this.numCriteriaInput = document.getElementById('numCriteria');
+                this.performanceTable = document.getElementById('performanceTable');
+                this.weightsContainer = document.getElementById('weightsContainer');
+                this.criteriaTypologyContainer = document.getElementById('criteriaTypologyContainer');
+                this.concordanceThresholdInput = document.getElementById('concordanceThreshold');
+                this.discordanceThresholdInput = document.getElementById('discordanceThreshold');
+                this.errorAlert = document.getElementById('errorAlert');
+                this.errorMessage = document.getElementById('errorMessage');
+                this.resultsSection = document.getElementById('resultsSection');
+
+                this.numAlternatives = 3;
+                this.numCriteria = 3;
+                this.performanceMatrix = [];
+                this.weights = [];
+                this.criteriaTypology = [];
+
+                this.initializeEventListeners();
+                this.generateMatrices();
+            }
+
+            initializeEventListeners() {
+                this.numAlternativesInput.addEventListener('change', () => {
+                    this.numAlternatives = parseInt(this.numAlternativesInput.value) || 2;
+                    this.generateMatrices();
+                });
+
+                this.numCriteriaInput.addEventListener('change', () => {
+                    this.numCriteria = parseInt(this.numCriteriaInput.value) || 2;
+                    this.generateMatrices();
+                });
+
+                this.form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleSubmit();
+                });
+
+                this.form.addEventListener('reset', () => {
+                    setTimeout(() => {
+                        this.errorAlert.classList.remove('show');
+                        this.resultsSection.classList.remove('show');
+                    }, 0);
+                });
+            }
+
+            generateMatrices() {
+                this.performanceMatrix = Array(this.numAlternatives)
+                    .fill(0)
+                    .map(() => Array(this.numCriteria).fill(0));
+
+                this.weights = Array(this.numCriteria).fill(1 / this.numCriteria);
+
+                this.criteriaTypology = Array(this.numCriteria).fill('max');
+
+                this.renderPerformanceTable();
+                this.renderWeights();
+                this.renderCriteriaTypology();
+            }
+
+            renderPerformanceTable() {
+                this.performanceTable.innerHTML = '';
+
+                // Header
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                headerRow.innerHTML = '<th>Alternative</th>';
+                for (let j = 0; j < this.numCriteria; j++) {
+                    headerRow.innerHTML += `<th>Critère ${j + 1}</th>`;
+                }
+                thead.appendChild(headerRow);
+                this.performanceTable.appendChild(thead);
+
+                // Body
+                const tbody = document.createElement('tbody');
+                for (let i = 0; i < this.numAlternatives; i++) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>A${i + 1}</td>`;
+                    
+                    for (let j = 0; j < this.numCriteria; j++) {
+                        const cell = document.createElement('td');
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.step = '0.01';
+                        input.value = this.performanceMatrix[i][j];
+                        input.addEventListener('change', (e) => {
+                            this.performanceMatrix[i][j] = parseFloat(e.target.value) || 0;
+                        });
+                        cell.appendChild(input);
+                        row.appendChild(cell);
+                    }
+                    tbody.appendChild(row);
+                }
+                this.performanceTable.appendChild(tbody);
+            }
+
+            renderWeights() {
+                this.weightsContainer.innerHTML = '';
+                for (let j = 0; j < this.numCriteria; j++) {
+                    const item = document.createElement('div');
+                    item.className = 'criteria-item';
+                    item.innerHTML = `
+                        <label>Critère ${j + 1}</label>
+                        <input type="number" min="0" max="1" step="0.01" value="${this.weights[j].toFixed(2)}" />
+                    `;
+                    const input = item.querySelector('input');
+                    input.addEventListener('change', (e) => {
+                        this.weights[j] = parseFloat(e.target.value) || 0;
+                        this.updateWeightSum();
+                    });
+                    this.weightsContainer.appendChild(item);
+                }
+                this.updateWeightSum();
+            }
+
+            updateWeightSum() {
+                const sumWeights = this.weights.reduce((sum, w) => sum + w, 0);
+                const weightSumEl = document.getElementById('weightSum');
+                const isValid = Math.abs(sumWeights - 1) <= 0.01;
+                
+                weightSumEl.textContent = `(Somme : ${sumWeights.toFixed(3)})`;
+                weightSumEl.classList.remove('valid', 'invalid');
+                weightSumEl.classList.add(isValid ? 'valid' : 'invalid');
+            }
+
+            renderCriteriaTypology() {
+                this.criteriaTypologyContainer.innerHTML = '';
+                for (let j = 0; j < this.numCriteria; j++) {
+                    const item = document.createElement('div');
+                    item.className = 'criteria-item';
+                    item.innerHTML = `
+                        <label>Critère ${j + 1}</label>
+                        <select>
+                            <option value="max">À maximiser</option>
+                            <option value="min">À minimiser</option>
+                        </select>
+                    `;
+                    const select = item.querySelector('select');
+                    select.value = this.criteriaTypology[j];
+                    select.addEventListener('change', (e) => {
+                        this.criteriaTypology[j] = e.target.value;
+                    });
+                    this.criteriaTypologyContainer.appendChild(item);
+                }
+            }
+
+            handleSubmit() {
+                this.errorAlert.classList.remove('show');
+
+                const concordanceThreshold = parseFloat(this.concordanceThresholdInput.value);
+                const discordanceThreshold = parseFloat(this.discordanceThresholdInput.value);
+
+                const validationError = ELECTREI.validateInputs(
+                    this.performanceMatrix,
+                    this.weights,
+                    concordanceThreshold,
+                    discordanceThreshold
+                );
+
+                if (validationError) {
+                    this.showError(validationError);
+                    return;
+                }
+
+                const concordanceMatrix = ELECTREI.calculateConcordanceMatrix(
+                    this.performanceMatrix,
+                    this.weights,
+                    this.criteriaTypology
+                );
+
+                const discordanceMatrix = ELECTREI.calculateDiscordanceMatrix(
+                    this.performanceMatrix,
+                    this.criteriaTypology
+                );
+
+                const outrankingMatrix = ELECTREI.calculateOutrankingMatrix(
+                    concordanceMatrix,
+                    discordanceMatrix,
+                    concordanceThreshold,
+                    discordanceThreshold
+                );
+
+                const kernel = ELECTREI.extractKernel(outrankingMatrix);
+                const recommendation = ELECTREI.generateRecommendation(kernel, outrankingMatrix);
+
+                this.displayResults(concordanceMatrix, discordanceMatrix, outrankingMatrix, recommendation);
+            }
+
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorAlert.classList.add('show');
+                this.resultsSection.classList.remove('show');
+            }
+
+            displayResults(concordanceMatrix, discordanceMatrix, outrankingMatrix, recommendation) {
+                this.renderConcordanceMatrix(concordanceMatrix);
+                this.renderDiscordanceMatrix(discordanceMatrix);
+                this.renderOutrankingMatrix(outrankingMatrix);
+                this.renderRecommendation(recommendation);
+                
+                this.resultsSection.classList.add('show');
+            }
+
+            renderConcordanceMatrix(matrix) {
+                const n = matrix.length;
+                let html = '<thead><tr><th></th>';
+                
+                for (let j = 0; j < n; j++) {
+                    html += `<th>A${j + 1}</th>`;
+                }
+                html += '</tr></thead><tbody>';
+
+                for (let i = 0; i < n; i++) {
+                    html += `<tr><td>A${i + 1}</td>`;
+                    for (let j = 0; j < n; j++) {
+                        html += `<td>${matrix[i][j].toFixed(3)}</td>`;
+                    }
+                    html += '</tr>';
+                }
+                html += '</tbody>';
+
+                document.getElementById('concordanceTable').innerHTML = html;
+            }
+
+            renderDiscordanceMatrix(matrix) {
+                const n = matrix.length;
+                let html = '<thead><tr><th></th>';
+                
+                for (let j = 0; j < n; j++) {
+                    html += `<th>A${j + 1}</th>`;
+                }
+                html += '</tr></thead><tbody>';
+
+                for (let i = 0; i < n; i++) {
+                    html += `<tr><td>A${i + 1}</td>`;
+                    for (let j = 0; j < n; j++) {
+                        html += `<td>${matrix[i][j].toFixed(3)}</td>`;
+                    }
+                    html += '</tr>';
+                }
+                html += '</tbody>';
+
+                document.getElementById('discordanceTable').innerHTML = html;
+            }
+
+            renderOutrankingMatrix(matrix) {
+                const n = matrix.length;
+                let html = '<thead><tr><th></th>';
+                
+                for (let j = 0; j < n; j++) {
+                    html += `<th>A${j + 1}</th>`;
+                }
+                html += '</tr></thead><tbody>';
+
+                for (let i = 0; i < n; i++) {
+                    html += `<tr><td>A${i + 1}</td>`;
+                    for (let j = 0; j < n; j++) {
+                        let cellContent = '';
+                        let cellClass = '';
+                        
+                        if (i === j) {
+                            cellContent = '-';
+                            cellClass = 'style="background-color: #f3f4f6;"';
+                        } else if (matrix[i][j]) {
+                            cellContent = '✓';
+                            cellClass = 'style="background-color: #dcfce7; color: #166534; font-weight: bold;"';
+                        } else {
+                            cellContent = '✗';
+                        }
+                        
+                        html += `<td ${cellClass}>${cellContent}</td>`;
+                    }
+                    html += '</tr>';
+                }
+                html += '</tbody>';
+
+                document.getElementById('outrankingTable').innerHTML = html;
+            }
+
+            renderRecommendation(recommendation) {
+                const recommendationBox = document.getElementById('recommendationBox');
+                const kernelEmpty = document.getElementById('kernelEmpty');
+                const recommendationItems = document.getElementById('recommendationItems');
+
+                if (recommendation.length === 0) {
+                    recommendationBox.style.display = 'none';
+                    kernelEmpty.style.display = 'block';
+                    return;
+                }
+
+                recommendationBox.style.display = 'block';
+                kernelEmpty.style.display = 'none';
+                
+                let html = '';
+                
+                for (const item of recommendation) {
+                    html += `
+                        <div class="recommendation-item">
+                            <div class="recommendation-rank">#${item.rank}</div>
+                            <div class="recommendation-label">A${item.index + 1}</div>
+                            <div class="recommendation-detail">Domine ${item.dominationCount} alternative(s)</div>
+                        </div>
+                    `;
+                }
+                
+                recommendationItems.innerHTML = html;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            new UIManager();
+        });
+    </script>
+</body>
+</html>
