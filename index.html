@@ -37,19 +37,27 @@
                 </div>
 
                 <div class="criteria-section">
-                    <h3>Caractéristique des critères</h3>
-                    <p class="matrix-description">Indiquez pour chaque critère si les valeurs plus élevées ou plus basses sont préférées.</p>
-                    <div class="criteria-grid" id="criteriaTypologyContainer">
+                    <h3>Caractéristiques des critères</h3>
+                    <p class="matrix-description">
+                        Renseignez le sens, le poids et optionnellement les bornes Min/Max de chaque critère.<br>
+                        <strong>Poids :</strong> entrez n'importe quelle valeur positive — ils seront normalisés automatiquement.<br>
+                        <strong>Min/Max :</strong> laissez vide pour utiliser automatiquement le min/max de vos données (standard ELECTRE I). Remplissez si votre enseignant impose des bornes fixes.
+                    </p>
+                    <div class="table-wrapper">
+                        <table id="criteriaTable" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th>Critère</th>
+                                    <th>Sens</th>
+                                    <th>Poids brut</th>
+                                    <th>Min (optionnel)</th>
+                                    <th>Max (optionnel)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="criteriaTableBody"></tbody>
+                        </table>
                     </div>
-                </div>
-
-                <div class="weights-section">
-                    <h3>
-                        Poids des critères
-                        <span class="weight-sum" id="weightSum">(Somme : 1.000)</span>
-                    </h3>
-                    <div class="criteria-grid" id="weightsContainer">
-                    </div>
+                    <p class="weight-sum" id="weightSum" style="margin-top:8px;">(Somme des poids : 0.000 → normalisés à 1.000)</p>
                 </div>
 
                 <div class="thresholds-section">
@@ -158,6 +166,29 @@
 
     <script>
         class ELECTREI {
+            // Normalize the performance matrix once using provided or data-derived min/max
+            static normalizeMatrix(performanceMatrix, criteriaTypology, customMin, customMax) {
+                const n = performanceMatrix.length;
+                const m = performanceMatrix[0].length;
+                const colMin = [], colMax = [];
+                for (let j = 0; j < m; j++) {
+                    const vals = performanceMatrix.map(r => r[j]);
+                    colMin[j] = (customMin[j] !== null && customMin[j] !== undefined) ? customMin[j] : Math.min(...vals);
+                    colMax[j] = (customMax[j] !== null && customMax[j] !== undefined) ? customMax[j] : Math.max(...vals);
+                }
+                const G = [];
+                for (let i = 0; i < n; i++) {
+                    G[i] = [];
+                    for (let j = 0; j < m; j++) {
+                        const range = colMax[j] - colMin[j] || 1;
+                        G[i][j] = criteriaTypology[j] === 'max'
+                            ? (performanceMatrix[i][j] - colMin[j]) / range
+                            : (colMax[j] - performanceMatrix[i][j]) / range;
+                    }
+                }
+                return G;
+            }
+
             static calculateConcordanceMatrix(performanceMatrix, weights, criteriaTypology = []) {
                 const n = performanceMatrix.length;
                 const m = performanceMatrix[0].length;
@@ -198,58 +229,33 @@
                 return concordanceMatrix;
             }
 
-            static calculateDiscordanceMatrix(performanceMatrix, criteriaTypology = []) {
-                const n = performanceMatrix.length;
-                const m = performanceMatrix[0].length;
-                
-                const typology = criteriaTypology.length === m 
-                    ? criteriaTypology 
-                    : Array(m).fill('max');
-                
+            static calculateDiscordanceMatrix(normalizedMatrix) {
+                const n = normalizedMatrix.length;
+                const m = normalizedMatrix[0].length;
+
+                // Global δ = max difference in normalized matrix across all criteria and pairs
+                let delta = 0;
+                for (let j = 0; j < m; j++)
+                    for (let a = 0; a < n; a++)
+                        for (let b = 0; b < n; b++)
+                            delta = Math.max(delta, Math.abs(normalizedMatrix[a][j] - normalizedMatrix[b][j]));
+                if (delta === 0) delta = 1;
+
                 const discordanceMatrix = Array(n).fill(0).map(() => Array(n).fill(0));
-
-                const amplitudes = [];
-                for (let j = 0; j < m; j++) {
-                    const values = performanceMatrix.map(row => row[j]);
-                    const max = Math.max(...values);
-                    const min = Math.min(...values);
-                    amplitudes.push(max - min || 1);
-                }
-
                 for (let a = 0; a < n; a++) {
                     for (let b = 0; b < n; b++) {
-                        if (a === b) {
-                            discordanceMatrix[a][b] = 0;
-                            continue;
-                        }
-
-                        let maxDiscordance = 0;
-
+                        if (a === b) continue;
+                        let maxDiff = 0, bBetter = false;
                         for (let j = 0; j < m; j++) {
-                            let isBSuperior = false;
-                            let diff = 0;
-                            
-                            if (typology[j] === 'max') {
-                                if (performanceMatrix[b][j] > performanceMatrix[a][j]) {
-                                    isBSuperior = true;
-                                    diff = (performanceMatrix[b][j] - performanceMatrix[a][j]) / amplitudes[j];
-                                }
-                            } else if (typology[j] === 'min') {
-                                if (performanceMatrix[b][j] < performanceMatrix[a][j]) {
-                                    isBSuperior = true;
-                                    diff = (performanceMatrix[a][j] - performanceMatrix[b][j]) / amplitudes[j];
-                                }
-                            }
-                            
-                            if (isBSuperior) {
-                                maxDiscordance = Math.max(maxDiscordance, diff);
+                            // All criteria already flipped to "maximize" in normalized matrix
+                            if (normalizedMatrix[b][j] > normalizedMatrix[a][j]) {
+                                bBetter = true;
+                                maxDiff = Math.max(maxDiff, normalizedMatrix[b][j] - normalizedMatrix[a][j]);
                             }
                         }
-
-                        discordanceMatrix[a][b] = maxDiscordance;
+                        discordanceMatrix[a][b] = bBetter ? maxDiff / delta : 0;
                     }
                 }
-
                 return discordanceMatrix;
             }
 
@@ -301,35 +307,21 @@
             }
 
             static validateInputs(performanceMatrix, weights, concordanceThreshold, discordanceThreshold) {
-                if (!performanceMatrix || performanceMatrix.length === 0) {
+                if (!performanceMatrix || performanceMatrix.length === 0)
                     return "La matrice de performance ne peut pas être vide";
-                }
-
-                if (weights.some(w => w < 0)) {
+                if (weights.some(w => w < 0))
                     return "Les poids doivent être positifs";
-                }
-
-                const sumWeights = weights.reduce((sum, w) => sum + w, 0);
-                if (Math.abs(sumWeights - 1) > 0.01) {
-                    return `La somme des poids doit être égale à 1 (actuellement: ${sumWeights.toFixed(2)})`;
-                }
-
-                if (concordanceThreshold < 0 || concordanceThreshold > 1) {
+                const sumWeights = weights.reduce((s, w) => s + w, 0);
+                if (sumWeights <= 0)
+                    return "La somme des poids doit être supérieure à 0";
+                if (concordanceThreshold < 0 || concordanceThreshold > 1)
                     return "Le seuil de concordance doit être entre 0 et 1";
-                }
-
-                if (discordanceThreshold < 0 || discordanceThreshold > 1) {
+                if (discordanceThreshold < 0 || discordanceThreshold > 1)
                     return "Le seuil de discordance doit être entre 0 et 1";
-                }
-
-                for (let i = 0; i < performanceMatrix.length; i++) {
-                    for (let j = 0; j < performanceMatrix[i].length; j++) {
-                        if (isNaN(performanceMatrix[i][j])) {
+                for (let i = 0; i < performanceMatrix.length; i++)
+                    for (let j = 0; j < performanceMatrix[i].length; j++)
+                        if (isNaN(performanceMatrix[i][j]))
                             return `Valeur invalide à la ligne ${i + 1}, colonne ${j + 1}`;
-                        }
-                    }
-                }
-
                 return null;
             }
 
@@ -368,8 +360,6 @@
                 this.numAlternativesInput = document.getElementById('numAlternatives');
                 this.numCriteriaInput = document.getElementById('numCriteria');
                 this.performanceTable = document.getElementById('performanceTable');
-                this.weightsContainer = document.getElementById('weightsContainer');
-                this.criteriaTypologyContainer = document.getElementById('criteriaTypologyContainer');
                 this.concordanceThresholdInput = document.getElementById('concordanceThreshold');
                 this.discordanceThresholdInput = document.getElementById('discordanceThreshold');
                 this.errorAlert = document.getElementById('errorAlert');
@@ -381,6 +371,8 @@
                 this.performanceMatrix = [];
                 this.weights = [];
                 this.criteriaTypology = [];
+                this.customMin = [];
+                this.customMax = [];
 
                 this.initializeEventListeners();
                 this.generateMatrices();
@@ -412,16 +404,13 @@
 
             generateMatrices() {
                 this.performanceMatrix = Array(this.numAlternatives)
-                    .fill(0)
-                    .map(() => Array(this.numCriteria).fill(0));
-
-                this.weights = Array(this.numCriteria).fill(1 / this.numCriteria);
-
+                    .fill(0).map(() => Array(this.numCriteria).fill(0));
+                this.weights = Array(this.numCriteria).fill(1);
                 this.criteriaTypology = Array(this.numCriteria).fill('max');
-
+                this.customMin = Array(this.numCriteria).fill(null);
+                this.customMax = Array(this.numCriteria).fill(null);
                 this.renderPerformanceTable();
-                this.renderWeights();
-                this.renderCriteriaTypology();
+                this.renderCriteriaTable();
             }
 
             renderPerformanceTable() {
@@ -458,54 +447,60 @@
                 this.performanceTable.appendChild(tbody);
             }
 
-            renderWeights() {
-                this.weightsContainer.innerHTML = '';
+            renderCriteriaTable() {
+                const tbody = document.getElementById('criteriaTableBody');
+                tbody.innerHTML = '';
                 for (let j = 0; j < this.numCriteria; j++) {
-                    const item = document.createElement('div');
-                    item.className = 'criteria-item';
-                    item.innerHTML = `
-                        <label>Critère ${j + 1}</label>
-                        <input type="number" min="0" max="1" step="0.01" value="${this.weights[j].toFixed(2)}" />
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight:600;">C${j + 1}</td>
+                        <td>
+                            <select data-j="${j}" class="sens-select">
+                                <option value="max">À maximiser</option>
+                                <option value="min">À minimiser</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" min="0" step="any" value="${this.weights[j]}"
+                                data-j="${j}" class="weight-input" style="width:80px;" />
+                        </td>
+                        <td>
+                            <input type="number" step="any" placeholder="auto"
+                                data-j="${j}" class="min-input" style="width:90px;"
+                                value="${this.customMin[j] !== null ? this.customMin[j] : ''}" />
+                        </td>
+                        <td>
+                            <input type="number" step="any" placeholder="auto"
+                                data-j="${j}" class="max-input" style="width:90px;"
+                                value="${this.customMax[j] !== null ? this.customMax[j] : ''}" />
+                        </td>
                     `;
-                    const input = item.querySelector('input');
-                    input.addEventListener('change', (e) => {
+                    tbody.appendChild(tr);
+
+                    tr.querySelector('.sens-select').value = this.criteriaTypology[j];
+                    tr.querySelector('.sens-select').addEventListener('change', (e) => {
+                        this.criteriaTypology[j] = e.target.value;
+                    });
+                    tr.querySelector('.weight-input').addEventListener('input', (e) => {
                         this.weights[j] = parseFloat(e.target.value) || 0;
                         this.updateWeightSum();
                     });
-                    this.weightsContainer.appendChild(item);
+                    tr.querySelector('.min-input').addEventListener('input', (e) => {
+                        const v = e.target.value.trim();
+                        this.customMin[j] = v === '' ? null : parseFloat(v);
+                    });
+                    tr.querySelector('.max-input').addEventListener('input', (e) => {
+                        const v = e.target.value.trim();
+                        this.customMax[j] = v === '' ? null : parseFloat(v);
+                    });
                 }
                 this.updateWeightSum();
             }
 
             updateWeightSum() {
-                const sumWeights = this.weights.reduce((sum, w) => sum + w, 0);
-                const weightSumEl = document.getElementById('weightSum');
-                const isValid = Math.abs(sumWeights - 1) <= 0.01;
-                
-                weightSumEl.textContent = `(Somme : ${sumWeights.toFixed(3)})`;
-                weightSumEl.classList.remove('valid', 'invalid');
-                weightSumEl.classList.add(isValid ? 'valid' : 'invalid');
-            }
-
-            renderCriteriaTypology() {
-                this.criteriaTypologyContainer.innerHTML = '';
-                for (let j = 0; j < this.numCriteria; j++) {
-                    const item = document.createElement('div');
-                    item.className = 'criteria-item';
-                    item.innerHTML = `
-                        <label>Critère ${j + 1}</label>
-                        <select>
-                            <option value="max">À maximiser</option>
-                            <option value="min">À minimiser</option>
-                        </select>
-                    `;
-                    const select = item.querySelector('select');
-                    select.value = this.criteriaTypology[j];
-                    select.addEventListener('change', (e) => {
-                        this.criteriaTypology[j] = e.target.value;
-                    });
-                    this.criteriaTypologyContainer.appendChild(item);
-                }
+                const rawSum = this.weights.reduce((s, w) => s + w, 0);
+                const el = document.getElementById('weightSum');
+                el.textContent = `(Somme des poids : ${rawSum.toFixed(3)} → normalisés à 1.000)`;
             }
 
             handleSubmit() {
@@ -513,6 +508,10 @@
 
                 const concordanceThreshold = parseFloat(this.concordanceThresholdInput.value);
                 const discordanceThreshold = parseFloat(this.discordanceThresholdInput.value);
+
+                // Normalize weights
+                const rawSum = this.weights.reduce((s, w) => s + w, 0);
+                const normalizedWeights = this.weights.map(w => w / rawSum);
 
                 const validationError = ELECTREI.validateInputs(
                     this.performanceMatrix,
@@ -526,16 +525,21 @@
                     return;
                 }
 
+                // Single normalization step used by both concordance and discordance
+                const normalizedMatrix = ELECTREI.normalizeMatrix(
+                    this.performanceMatrix,
+                    this.criteriaTypology,
+                    this.customMin,
+                    this.customMax
+                );
+
                 const concordanceMatrix = ELECTREI.calculateConcordanceMatrix(
                     this.performanceMatrix,
-                    this.weights,
+                    normalizedWeights,
                     this.criteriaTypology
                 );
 
-                const discordanceMatrix = ELECTREI.calculateDiscordanceMatrix(
-                    this.performanceMatrix,
-                    this.criteriaTypology
-                );
+                const discordanceMatrix = ELECTREI.calculateDiscordanceMatrix(normalizedMatrix);
 
                 const outrankingMatrix = ELECTREI.calculateOutrankingMatrix(
                     concordanceMatrix,
@@ -547,7 +551,7 @@
                 const kernel = ELECTREI.extractKernel(outrankingMatrix);
                 const recommendation = ELECTREI.generateRecommendation(kernel, outrankingMatrix);
 
-                this.displayResults(concordanceMatrix, discordanceMatrix, outrankingMatrix, recommendation);
+                this.displayResults(concordanceMatrix, discordanceMatrix, outrankingMatrix, recommendation, normalizedWeights);
             }
 
             showError(message) {
@@ -556,12 +560,11 @@
                 this.resultsSection.classList.remove('show');
             }
 
-            displayResults(concordanceMatrix, discordanceMatrix, outrankingMatrix, recommendation) {
+            displayResults(concordanceMatrix, discordanceMatrix, outrankingMatrix, recommendation, normalizedWeights) {
                 this.renderConcordanceMatrix(concordanceMatrix);
                 this.renderDiscordanceMatrix(discordanceMatrix);
                 this.renderOutrankingMatrix(outrankingMatrix);
                 this.renderRecommendation(recommendation);
-                
                 this.resultsSection.classList.add('show');
             }
 
