@@ -38,9 +38,17 @@
 
                 <div class="criteria-section">
                     <h3>Caractéristiques des critères</h3>
+                    <div class="weight-toggle-section">
+                        <label>
+                            <input type="radio" name="weightMode" value="raw" checked> Poids brut (normalisés auto)
+                        </label>
+                        <label>
+                            <input type="radio" name="weightMode" value="normalized"> Poids déjà normalisés
+                        </label>
+                    </div>
                     <p class="matrix-description">
                         Renseignez le sens, le poids et optionnellement les bornes Min/Max de chaque critère.<br>
-                        <strong>Poids :</strong> entrez n'importe quelle valeur positive — ils seront normalisés automatiquement.<br>
+                        <strong>Poids :</strong> en mode brut, les valeurs seront normalisées automatiquement. En mode normalisé, les poids sont utilisés tels quels.<br>
                         <strong>Min/Max :</strong> laissez vide pour utiliser automatiquement le min/max de vos données (standard ELECTRE I). Remplissez si votre enseignant impose des bornes fixes.
                     </p>
                     <div class="table-wrapper">
@@ -49,7 +57,7 @@
                                 <tr>
                                     <th>Critère</th>
                                     <th>Sens</th>
-                                    <th>Poids brut</th>
+                                    <th>Poids</th>
                                     <th>Min (optionnel)</th>
                                     <th>Max (optionnel)</th>
                                 </tr>
@@ -66,14 +74,14 @@
                             <label for="concordanceThreshold">Seuil de concordance (0-1)</label>
                             <p class="threshold-description">Niveau minimum de concordance requis pour le surclassement</p>
                         </div>
-                        <input type="number" id="concordanceThreshold" min="0" max="1" step="0.01" value="0.7" required>
+                        <input type="number" id="concordanceThreshold" min="0" max="1" step="any" value="0.7" required>
                     </div>
                     <div class="threshold-row">
                         <div>
                             <label for="discordanceThreshold">Seuil de discordance (0-1)</label>
                             <p class="threshold-description">Niveau maximum de discordance autorisé pour le surclassement</p>
                         </div>
-                        <input type="number" id="discordanceThreshold" min="0" max="1" step="0.01" value="0.3" required>
+                        <input type="number" id="discordanceThreshold" min="0" max="1" step="any" value="0.3" required>
                     </div>
                 </div>
 
@@ -373,6 +381,7 @@
                 this.criteriaTypology = [];
                 this.customMin = [];
                 this.customMax = [];
+                this.weightMode = 'raw'; // 'raw' or 'normalized'
 
                 this.initializeEventListeners();
                 this.generateMatrices();
@@ -387,6 +396,13 @@
                 this.numCriteriaInput.addEventListener('change', () => {
                     this.numCriteria = parseInt(this.numCriteriaInput.value) || 2;
                     this.generateMatrices();
+                });
+
+                document.querySelectorAll('input[name="weightMode"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        this.weightMode = e.target.value;
+                        this.updateWeightSum();
+                    });
                 });
 
                 this.form.addEventListener('submit', (e) => {
@@ -434,7 +450,8 @@
                         const cell = document.createElement('td');
                         const input = document.createElement('input');
                         input.type = 'number';
-                        input.step = '0.01';
+                        input.step = 'any';
+                        input.min = '0';
                         input.value = this.performanceMatrix[i][j];
                         input.addEventListener('change', (e) => {
                             this.performanceMatrix[i][j] = parseFloat(e.target.value) || 0;
@@ -456,8 +473,8 @@
                         <td style="font-weight:600;">C${j + 1}</td>
                         <td>
                             <select data-j="${j}" class="sens-select">
-                                <option value="max">À maximiser</option>
-                                <option value="min">À minimiser</option>
+                                <option value="max">Max</option>
+                                <option value="min">Min</option>
                             </select>
                         </td>
                         <td>
@@ -465,12 +482,12 @@
                                 data-j="${j}" class="weight-input" style="width:80px;" />
                         </td>
                         <td>
-                            <input type="number" step="any" placeholder="auto"
+                            <input type="number" min="0" step="any" placeholder="auto"
                                 data-j="${j}" class="min-input" style="width:90px;"
                                 value="${this.customMin[j] !== null ? this.customMin[j] : ''}" />
                         </td>
                         <td>
-                            <input type="number" step="any" placeholder="auto"
+                            <input type="number" min="0" step="any" placeholder="auto"
                                 data-j="${j}" class="max-input" style="width:90px;"
                                 value="${this.customMax[j] !== null ? this.customMax[j] : ''}" />
                         </td>
@@ -500,7 +517,12 @@
             updateWeightSum() {
                 const rawSum = this.weights.reduce((s, w) => s + w, 0);
                 const el = document.getElementById('weightSum');
-                el.textContent = `(Somme des poids : ${rawSum.toFixed(3)} → normalisés à 1.000)`;
+                
+                if (this.weightMode === 'raw') {
+                    el.textContent = `(Somme des poids : ${rawSum.toFixed(3)} → normalisés à 1.000)`;
+                } else {
+                    el.textContent = `(Somme des poids : ${rawSum.toFixed(3)} - pas de normalisation)`;
+                }
             }
 
             handleSubmit() {
@@ -509,9 +531,19 @@
                 const concordanceThreshold = parseFloat(this.concordanceThresholdInput.value);
                 const discordanceThreshold = parseFloat(this.discordanceThresholdInput.value);
 
-                // Normalize weights
-                const rawSum = this.weights.reduce((s, w) => s + w, 0);
-                const normalizedWeights = this.weights.map(w => w / rawSum);
+                // Normalize weights only if in raw mode
+                let weightsToUse = this.weights;
+                if (this.weightMode === 'raw') {
+                    const rawSum = this.weights.reduce((s, w) => s + w, 0);
+                    weightsToUse = this.weights.map(w => w / rawSum);
+                } else {
+                    // In normalized mode, validate that weights sum to exactly 1.0
+                    const weightSum = this.weights.reduce((s, w) => s + w, 0);
+                    if (Math.abs(weightSum - 1.0) > 0.0001) {
+                        this.showError(`En mode normalisé, la somme des poids DOIT être égale à 1.0 (actuellement: ${weightSum.toFixed(6)})`);
+                        return;
+                    }
+                }
 
                 const validationError = ELECTREI.validateInputs(
                     this.performanceMatrix,
@@ -535,7 +567,7 @@
 
                 const concordanceMatrix = ELECTREI.calculateConcordanceMatrix(
                     this.performanceMatrix,
-                    normalizedWeights,
+                    weightsToUse,
                     this.criteriaTypology
                 );
 
@@ -551,7 +583,7 @@
                 const kernel = ELECTREI.extractKernel(outrankingMatrix);
                 const recommendation = ELECTREI.generateRecommendation(kernel, outrankingMatrix);
 
-                this.displayResults(concordanceMatrix, discordanceMatrix, outrankingMatrix, recommendation, normalizedWeights);
+                this.displayResults(concordanceMatrix, discordanceMatrix, outrankingMatrix, recommendation, weightsToUse);
             }
 
             showError(message) {

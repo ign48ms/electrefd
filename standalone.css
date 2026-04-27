@@ -316,6 +316,28 @@ button {
     color: #374151;
 }
 
+.weight-toggle-section {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f9fafb;
+    border-radius: 0.375rem;
+}
+
+.weight-toggle-section label {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: #374151;
+    cursor: pointer;
+    gap: 0.5rem;
+}
+
+.weight-toggle-section input[type="radio"] {
+    cursor: pointer;
+}
+
 .criteria-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
